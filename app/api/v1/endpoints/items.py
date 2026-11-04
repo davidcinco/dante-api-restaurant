@@ -1,14 +1,14 @@
-from fas0000000000000000000000000000000000000000tapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException
 from app.schemas.items import ItemCreate, Item
 
 router = APIRouter()
 
 items: list[Item] = [
-    Item(item_id=1, item_name="Item 1", price=10.0),
-    Item(item_id=2, item_name="Item 2", price=33.49),
-    Item(item_id=3, item_name="Item 3", price=15.29),
-    Item(item_id=4, item_name="Item 4", price=10.99),
-    Item(item_id=5, item_name="Item 5", price=4.99)
+    Item(item_id=1, item_name="Item 1", category_id="1", price=10.0),
+    Item(item_id=2, item_name="Item 2", category_id="1", price=33.49),
+    Item(item_id=3, item_name="Item 3", category_id="1", price=15.29),
+    Item(item_id=4, item_name="Item 4", category_id="1", price=10.99),
+    Item(item_id=5, item_name="Item 5", category_id="1", price=4.99)
 ]
 
 def find_item(item_id: int) -> Item:
@@ -32,7 +32,7 @@ def get_item(item_id: int):
 @router.post("/items/", response_model=Item, status_code=201)
 def create_item(data: ItemCreate):
     new_id = max((item.item_id for item in items), default=0) + 1
-    item = Item(item_id=new_id, item_name=data.item_name, price=data.price)
+    item = Item(item_id=new_id, item_name=data.item_name, category_id=data.category_id, price=data.price)
     items.append(item)
     return item
 
