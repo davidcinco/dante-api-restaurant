@@ -1,15 +1,12 @@
-from fastapi import APIRouter, HTTPException
-from app.schemas.items import ItemCreate, Item
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.db.session import get_db
+from app.models.items import Item as ItemModel
+from app.schemas.items import Item
 
 router = APIRouter()
-
-items: list[Item] = [
-    Item(item_id=1, item_name="Item 1", category_id="1", price=10.0),
-    Item(item_id=2, item_name="Item 2", category_id="1", price=33.49),
-    Item(item_id=3, item_name="Item 3", category_id="1", price=15.29),
-    Item(item_id=4, item_name="Item 4", category_id="1", price=10.99),
-    Item(item_id=5, item_name="Item 5", category_id="1", price=4.99)
-]
 
 def find_item(item_id: int) -> Item:
     for item in items:
@@ -22,12 +19,15 @@ def root():
     return {"Hello": "World"}
 
 @router.get("/items/", response_model=list[Item])
-def get_items():
-    return items
+def get_items(db: Session = Depends(get_db)):
+    return db.scalars(select(ItemModel)).all()
 
 @router.get("/items/{item_id}", response_model=Item)
-def get_item(item_id: int):
-    return find_item(item_id)
+def get_item(item_id: int, db: Session = Depends(get_db)):
+    item = db.get(ItemModel, item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return item
 
 @router.post("/items/", response_model=Item, status_code=201)
 def create_item(data: ItemCreate):

@@ -1,4 +1,5 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+from decimal import Decimal
 
 class ItemCreate(BaseModel):
     item_name: str
@@ -6,4 +7,5 @@ class ItemCreate(BaseModel):
     price: float
 
 class Item(ItemCreate):
+    model_config = ConfigDict(from_attributes=True)
     item_id: int
