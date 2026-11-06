@@ -1,48 +1,55 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models.items import Item as ItemModel
-from app.schemas.items import Item
+from app.schemas.items import Item, ItemCreate
 
 router = APIRouter()
 
-def find_item(item_id: int) -> Item:
-    for item in items:
-        if item.item_id == item_id:
-            return item
-    raise HTTPException(status_code=404, detail="Item not found")
-
-@router.get("/")
-def root():
-    return {"Hello": "World"}
-
-@router.get("/items/", response_model=list[Item])
+#get endpoints
+@router.get("/", response_model=list[Item])
 def get_items(db: Session = Depends(get_db)):
     return db.scalars(select(ItemModel)).all()
 
-@router.get("/items/{item_id}", response_model=Item)
+@router.get("/{item_id}", response_model=Item)
 def get_item(item_id: int, db: Session = Depends(get_db)):
     item = db.get(ItemModel, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
     return item
 
-@router.post("/items/", response_model=Item, status_code=201)
-def create_item(data: ItemCreate):
-    new_id = max((item.item_id for item in items), default=0) + 1
-    item = Item(item_id=new_id, item_name=data.item_name, category_id=data.category_id, price=data.price)
-    items.append(item)
+#post endpoints
+@router.post("/", response_model=Item, status_code=status.HTTP_201_CREATED)
+def create_item(data: ItemCreate, db: Session = Depends(get_db)):
+    item = ItemModel(item_name=data.item_name, category_id=data.category_id, price=data.price)
+    
+    db.add(item)
+    db.commit()
+    db.refresh(item)
     return item
 
-@router.put("/items/{item_id}", response_model=Item)
-def update_item(item_id: int, updated_item: ItemCreate):
-    item = find_item(item_id)
-    item.item_name = updated_item.item_name
-    item.price = updated_item.price
+#put endpoints
+@router.put("/{item_id}", response_model=Item)
+def update_item(item_id: int, updated_item: ItemCreate, db: Session = Depends(get_db)):
+    item = db.get(ItemModel, item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    for field, value in updated_item.model_dump().items():
+        setattr(item, field, value)
+
+    db.commit()
+    db.refresh(item)
     return item
 
-@router.delete("/items/{item_id}", status_code=204)
-def delete_item(item_id: int):
-    items.remove(find_item(item_id))
+#delete endpoints
+@router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_item(item_id: int, db: Session = Depends(get_db)):
+    item = db.get(ItemModel, item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    db.delete(item)
+    db.commit()
